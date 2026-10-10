@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -78,9 +79,27 @@ struct Mesh {
 struct Shader {
     GLuint id = 0;
 
+    static std::string resolvePath(const std::string& path) {
+        std::vector<std::string> candidates = {
+            path,
+            std::string("./") + path,
+            std::string("../") + path
+        };
+
+        for (const std::string& candidate : candidates) {
+            std::filesystem::path p(candidate);
+            if (std::filesystem::exists(p) && std::filesystem::is_regular_file(p)) {
+                return p.string();
+            }
+        }
+
+        return path;
+    }
+
     static std::string readFile(const std::string& path) {
-        std::ifstream file(path);
-        if (!file) throw std::runtime_error("Could not open shader: " + path);
+        const std::string resolvedPath = resolvePath(path);
+        std::ifstream file(resolvedPath);
+        if (!file) throw std::runtime_error("Could not open shader: " + resolvedPath);
         std::stringstream buffer;
         buffer << file.rdbuf();
         return buffer.str();
@@ -3179,6 +3198,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     GLFWwindow* window = glfwCreateWindow(1440, 880, "3D Sea Port Simulator & Management Showcase", nullptr, nullptr);
     if (!window) {
